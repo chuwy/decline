@@ -1,5 +1,6 @@
 package com.monovore.decline
 
+import cats.Show
 import cats.data.NonEmptyList
 import cats.implicits._
 
@@ -14,20 +15,25 @@ case class Help(
 
   def withPrefix(prefix: List[String]) = copy(prefix = prefix.foldRight(this.prefix) { _ :: _ })
 
-  override def toString = {
-    val maybeErrors = if (errors.isEmpty) Nil else List(errors.mkString("\n"))
-    val prefixString = prefix.toList.mkString(" ")
-    val usageString = usage match {
-      case Nil => s"Usage: $prefixString" // :(
-      case only :: Nil => s"Usage: $prefixString $only"
-      case _ => ("Usage:" :: usage).mkString(s"\n    $prefixString ")
-    }
-
-    (maybeErrors ::: (usageString :: body)).mkString("\n\n")
-  }
+  @deprecated
+  override def toString =
+    Help.declineHelpShow.show(this)
 }
 
 object Help {
+
+  implicit val declineHelpShow: Show[Help] =
+    Show.show { help =>
+      val maybeErrors = if (help.errors.isEmpty) Nil else List(help.errors.mkString("\n"))
+      val prefixString = help.prefix.toList.mkString(" ")
+      val usageString = help.usage match {
+        case Nil => s"Usage: $prefixString" // :(
+        case only :: Nil => s"Usage: $prefixString $only"
+        case _ => ("Usage:" :: help.usage).mkString(s"\n    $prefixString ")
+      }
+
+      (maybeErrors ::: (usageString :: help.body)).mkString("\n\n")
+    }
 
   def fromCommand(parser: Command[_]): Help = {
 
